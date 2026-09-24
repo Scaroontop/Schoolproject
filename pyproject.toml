@@ -1,2 +1,2 @@
 [tool.vercel]
-entrypoint = "unenroll:handler"
+entrypoint = "api.unenroll:handler"
