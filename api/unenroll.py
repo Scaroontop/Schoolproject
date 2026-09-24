@@ -15,7 +15,7 @@ TOKEN_URL = "https://www.googleapis.com/oauth2/v4/token"
 DM_API = "https://m.google.com/devicemanagement/data/api"
 SCOPES = "https://www.googleapis.com/auth/chromeosdevicemanagement https://www.googleapis.com/auth/userinfo.email"
 
-PROXY_API_KEY = ""
+PROXY_API_KEY = "nex_live_b1448735b70db775"
 PROXY_API_URL = "https://console.nextproxy.site/api/random"
 
 
