@@ -1,4 +1,3 @@
-# api/unenroll.py
 import json
 import os
 import uuid
@@ -16,6 +15,9 @@ TOKEN_URL = "https://www.googleapis.com/oauth2/v4/token"
 DM_API = "https://m.google.com/devicemanagement/data/api"
 SCOPES = "https://www.googleapis.com/auth/chromeosdevicemanagement https://www.googleapis.com/auth/userinfo.email"
 
+PROXY_API_KEY = ""
+PROXY_API_URL = "https://console.nextproxy.site/api/random"
+
 
 class ApiError(Exception):
     def __init__(self, message, status=400):
@@ -23,8 +25,28 @@ class ApiError(Exception):
         self.status = status
 
 
-def token_exchange(payload):
-    r = requests.post(TOKEN_URL, data=payload, timeout=15)
+def get_proxy():
+    headers = {
+        "X-API-Key": PROXY_API_KEY,
+        "Accept": "application/json"
+    }
+    try:
+        response = requests.get(PROXY_API_URL, headers=headers, timeout=10)
+        if response.status_code == 200:
+            node = response.json()
+            ip = node.get('ip')
+            port = node.get('port')
+            p_type = node.get('type', 'http').lower()
+            
+            proxy_str = f"{p_type}://{ip}:{port}"
+            return {"http": proxy_str, "https": proxy_str}
+    except Exception:
+        pass
+    return None
+
+
+def token_exchange(payload, proxies=None):
+    r = requests.post(TOKEN_URL, data=payload, timeout=15, proxies=proxies)
     try:
         body = r.json()
     except ValueError:
@@ -35,12 +57,15 @@ def token_exchange(payload):
 
 
 def run_unenroll(serial_number, oauth_code):
+    # fetch proxy once per unenroll attempt
+    proxies = get_proxy()
+
     refresh = token_exchange({
         "code": oauth_code,
         "client_id": CLIENT_ID,
         "client_secret": CLIENT_SECRET,
         "grant_type": "authorization_code",
-    })
+    }, proxies=proxies)
     refresh_token = refresh.get("refresh_token")
     if not refresh_token:
         raise ApiError("no refresh_token returned - oauth code is invalid or already used")
@@ -51,7 +76,7 @@ def run_unenroll(serial_number, oauth_code):
         "grant_type": "refresh_token",
         "refresh_token": refresh_token,
         "scope": SCOPES,
-    })
+    }, proxies=proxies)
     oauth_token = access.get("access_token")
     if not oauth_token:
         raise ApiError("no access_token from refresh exchange", 502)
@@ -71,6 +96,7 @@ def run_unenroll(serial_number, oauth_code):
             headers={"Content-Type": "application/protobuf"},
             data=request.SerializeToString(),
             timeout=20,
+            proxies=proxies,
         )
         data = proto.DeviceManagementResponse()
         data.ParseFromString(r.content)
@@ -106,6 +132,7 @@ def run_unenroll(serial_number, oauth_code):
             },
             data=request.SerializeToString(),
             timeout=20,
+            proxies=proxies,
         )
     except requests.RequestException:
         pass  # response ignored, same as the original script
