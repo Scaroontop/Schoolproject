@@ -1,2 +1,11 @@
+[project]
+name = "schoolproject"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = [
+    "requests",
+    "protobuf",
+]
+
 [tool.vercel]
 entrypoint = "api.unenroll:handler"
