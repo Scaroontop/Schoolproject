@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Device Unenroll</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: canvas;
+      color: canvastext;
+      padding: 1rem;
+    }
+
+    .card {
+      width: min(100%, 38rem);
+      border: 1px solid color-mix(in oklab, currentColor 20%, transparent);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      background: color-mix(in oklab, canvas 90%, black 4%);
+      box-sizing: border-box;
+    }
+
+    form {
+      display: grid;
+      gap: 0.9rem;
+    }
+
+    label {
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 0.5rem;
+      border: 1px solid color-mix(in oklab, currentColor 28%, transparent);
+      padding: 0.65rem;
+      font: inherit;
+      background: canvas;
+      color: canvastext;
+    }
+
+    button {
+      padding: 0.7rem 1rem;
+      border: 0;
+      border-radius: 0.5rem;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      background: #2563eb;
+      color: #fff;
+    }
+
+    button[disabled] {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    #status {
+      min-height: 1.5rem;
+      font-weight: 600;
+    }
+
+    .error {
+      color: #b91c1c;
+    }
+
+    .success {
+      color: #047857;
+    }
+
+    pre {
+      margin: 0;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border: 1px solid color-mix(in oklab, currentColor 20%, transparent);
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Device Unenroll</h1>
+    <p>This page must be deployed in the same Vercel project as the <code>api</code> directory so the relative endpoint <code>/api/unenroll</code> resolves correctly.</p>
+
+    <form id="unenroll-form" novalidate>
+      <div>
+        <label for="serial_number">Serial number</label>
+        <input
+          id="serial_number"
+          name="serial_number"
+          type="text"
+          inputmode="text"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          required
+        >
+      </div>
+
+      <div>
+        <label for="oauth_code">OAuth code</label>
+        <input
+          id="oauth_code"
+          name="oauth_code"
+          type="text"
+          inputmode="text"
+          autocomplete="one-time-code"
+          autocapitalize="off"
+          spellcheck="false"
+          required
+        >
+      </div>
+
+      <button id="submit-btn" type="submit">Unenroll device</button>
+    </form>
+
+    <p id="status" role="status" aria-live="polite"></p>
+    <pre id="response" aria-label="API response"></pre>
+  </main>
+
+  <script>
+    const form = document.getElementById('unenroll-form');
+    const submitButton = document.getElementById('submit-btn');
+    const statusEl = document.getElementById('status');
+    const responseEl = document.getElementById('response');
+
+    const setStatus = (message, type) => {
+      statusEl.textContent = message;
+      statusEl.className = type || '';
+    };
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      if (submitButton.disabled) {
+        return;
+      }
+
+      const formData = new FormData(form);
+      const serial_number = String(formData.get('serial_number') || '').trim();
+      const oauth_code = String(formData.get('oauth_code') || '').trim();
+
+      if (!serial_number || !oauth_code) {
+        setStatus('Please provide both serial number and OAuth code.', 'error');
+        return;
+      }
+
+      submitButton.disabled = true;
+      setStatus('Submitting request...', '');
+      responseEl.textContent = '';
+
+      try {
+        const response = await fetch('/api/unenroll', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ serial_number, oauth_code })
+        });
+
+        const responseText = await response.text();
+        responseEl.textContent = responseText;
+
+        if (response.ok) {
+          setStatus('Request completed successfully.', 'success');
+        } else {
+          setStatus(`Request failed with status ${response.status}.`, 'error');
+        }
+      } catch (error) {
+        setStatus('Network error while contacting /api/unenroll.', 'error');
+        responseEl.textContent = error instanceof Error ? error.message : String(error);
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
