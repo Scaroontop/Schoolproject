@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "requests",
-    "protobuf==4.25.3",
+    "protobuf==5.29.6",
 ]
 
 [tool.vercel]
